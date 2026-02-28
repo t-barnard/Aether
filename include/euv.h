@@ -8,7 +8,7 @@
  * \class Euv
  *
  * \brief Defines the Extreme Ultraviolet radiation above the atmosphere
- * 
+ *
  * The Euv class defines the EUV environment above the atmosphere. It
  * does this through the use of a CSV file that contains a bunch of
  * information. Namely:
@@ -18,7 +18,7 @@
  *
  * \author Aaron Ridley
  *
- * \date 2021/03/28 
+ * \date 2021/03/28
  *
  **************************************************************/
 
@@ -27,12 +27,12 @@
 
 class Euv {
 
-public:
+ public:
 
   /// whether to actuall use euv at all:
   bool doUse;
-  
-  /// number of wavelengths in spectrum: 
+
+  /// number of wavelengths in spectrum:
   int nWavelengths;
 
   // number of lines in the EUV CSV file:
@@ -59,10 +59,10 @@ public:
 
   /// EUV Spectrum, lower wavelength of the bins:
   std::vector<float> wavelengths_short;
-  
+
   /// EUV Spectrum, upper wavelength of the bins:
   std::vector<float> wavelengths_long;
-  
+
   /// EUV Spectrum, energy of bin:
   std::vector<float> wavelengths_energy;
 
@@ -81,7 +81,7 @@ public:
   std::vector<float> solomon_hfg_c1;
   std::vector<float> solomon_hfg_c2;
   std::vector<float> solomon_hfg_fref;
-  
+
   /// NEUVAC model linear coefficients (1-3):
   std::vector<float> neuvac_s1;
   std::vector<float> neuvac_s2;
@@ -93,6 +93,11 @@ public:
 
   /// NEUVAC model intercept:
   std::vector<float> neuvac_int;
+
+  // To avoid having to start from 0 each iteration:
+  int fism_prev_index = 0;
+  // Declare this so it is not passed between function:
+  index_file_output_struct fismData;
   
   // --------------------------------------------------------------------
   // Functions:
@@ -115,6 +120,19 @@ public:
      \param indices Need the F107 and F107a
    **/
  bool solomon_hfg(Times time, Indices indices);
+
+  /**********************************************************************
+     \brief returns the FISM spectrum for a given time
+
+    Unlike the other EUV models ([N]EUVAC, Solomon, etc.), the spectrum
+    is read from a file (stored in fismData). This does the same thing
+    as get_index, however FISM is not stored in Indices since it can
+    have variable # of bins
+
+     \param time The times within the model (dt is needed)
+   **/
+
+ bool get_fism(Times time);
   
   /**********************************************************************
      \brief Compute the EUV spectrum given F107 and F107a (new version)
@@ -135,7 +153,7 @@ public:
 
      Reads through each row in the EUV CSV file and figures out whether
      the row is abs, ion, diss, and then figures out which neutral it is
-     acting on and which neutral or ion results from the action 
+     acting on and which neutral or ion results from the action
      (e.g. O + photon -> O+, identifies O as ionization "loss" and
      O+ as an ionization "source")
 
@@ -147,19 +165,30 @@ public:
   /**********************************************************************
      \brief Check to see if internal state of class is ok
    **/
-  
+
   bool is_ok();
-  
-private:
+
+ private:
 
   /**********************************************************************
      \brief Read in the EUV CSV file
 
      Read in the EUV CSV file that describes all of the wavelengths and
-     cross sections (and any other EUV - related things that are a 
+     cross sections (and any other EUV - related things that are a
      function of wavelength)
    **/
   bool read_file();
+
+  /**********************************************************************
+     \brief Read in the FISM  file
+
+     Read in the CSV file with FISM data. This can be made with
+      srcPython/fism.py. The data are read into a index_file_output_struct,
+      where each row is one time, and each col is a "variable". These should
+      match the number of bins in the provided EUV file.
+   **/
+ index_file_output_struct read_fism(std::string fism_filename);
+
 
   /**********************************************************************
      \brief Interprets the EUV CSV rows and returns the relevant row
@@ -172,8 +201,8 @@ private:
      \return values The values in the CSV row that matches the item (and item2)
    **/
   bool slot_euv(std::string item,
-		std::string item2,
-		std::vector<float> &values);
+                std::string item2,
+                std::vector<float> &values);
 
   /// An internal variable to hold the state of the class
   bool IsOk;
